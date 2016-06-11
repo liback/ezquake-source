@@ -876,7 +876,7 @@ void CL_QWURL_f (void)
 	{
 		char *password = command + 4;
 
-		if (strchr(connection_str, 'a')) {
+		if (strchr(connection_str, '@')) {
 			// Server arg using syntax: id@qtvServer:port/qtv
 			Cbuf_AddText(va("qtvplay %s%s\n", connection_str, ((*password) ? va(" %s", password) : "")));
 		} else {
