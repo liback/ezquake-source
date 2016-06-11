@@ -28,6 +28,7 @@ cvar_t qtv_api_url = {"qtv_api_url", "http://qtv.atrophied.co.uk/api/qtv/servers
 
 static json_t *root;
 static SDL_mutex *qtvlist_mutex;
+static SDL_Thread *qtvlist_thread;
 
 extern char *CL_QTV_GetCurrentStream(void);
 
@@ -387,8 +388,12 @@ static void qtvlist_qtv_cmd(void)
 	}
 
 	if (SDL_TryLockMutex(qtvlist_mutex) != 0) {
-		Com_Printf("QTV list is being updated, please try again soon\n");
-		return;
+		int qtvlistThreadRetVal;
+		
+		// We are likely to end up here when launching client
+		// by clicking QTV lookup link: qw://ip:port/qtv  
+		SDL_WaitThread(qtvlist_thread, &qtvlistThreadRetVal);
+		Com_Printf("Waiting for QTV list update to finish...,\n");
 	}
 
 	qtvaddress = qtvlist_get_qtvaddress((const char*)&tmp[0], Q_atoi(port));
@@ -473,8 +478,6 @@ static void qtvlist_find_player_cmd(void)
 
 static void qtvlist_spawn_updater(void)
 {
-	SDL_Thread *qtvlist_thread;
-
 	if (qtvlist_mutex == NULL) {
 		Com_Printf("error: cannot update QTV list, mutex not initialized\n");
 		return;

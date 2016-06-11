@@ -876,7 +876,13 @@ void CL_QWURL_f (void)
 	{
 		char *password = command + 4;
 
-		Cbuf_AddText(va("qtvplay %s%s\n", connection_str, ((*password) ? va(" %s", password) : "")));
+		if (strchr(connection_str, 'a')) {
+			// Server arg using syntax: id@qtvServer:port/qtv
+			Cbuf_AddText(va("qtvplay %s%s\n", connection_str, ((*password) ? va(" %s", password) : "")));
+		} else {
+			// Server arg using syntax: gameServer:port/qtv
+			Cbuf_AddText(va("qtv %s%s\n", connection_str, ((*password) ? va(" %s", password) : "")));
+		}
 	}
 	else
 	{
