@@ -79,6 +79,9 @@ struct cam_positions {
 	char *pos_y;
 	char *pos_x;
 	char *pos_z;
+	char *pitch;
+	char *yaw;
+	char *roll;
 
 	struct cam_positions *next;
 };
@@ -2034,7 +2037,7 @@ void CL_Init (void)
 	Sys_chdir(com_basedir);
 	
 	cls.screenshot_session = 0;
-	cls.screenshot_cur_cam_pos_id = 0;
+	cls.last_screenshot_time = 0;
 
 	cls.state = ca_disconnected;
 	cls.min_fps = 999999;
@@ -2351,14 +2354,19 @@ void CL_Frame (double time)
 		if (strcmp(cam_pos_current->map, sv.mapname) == 0) {
 			
 			// Some delay to get rid of the console blocking our view
-			if (sv.time > 10 && cls.state >= ca_active) {
+			if ((sv.time > 2 && cls.state >= ca_active) && (sv.time - cls.last_screenshot_time > 2)) {
 				
 				// Set camera position
 				Cbuf_AddText(va("cam_pos %s %s %s\n", cam_pos_current->pos_x, cam_pos_current->pos_y, cam_pos_current->pos_z));
 				
+				// Set camera angles
+				Cbuf_AddText(va("cam_angles %s %s %s\n", cam_pos_current->pitch, cam_pos_current->yaw, cam_pos_current->roll));
+				
+				//Com_Printf("=== From File ===\nPos-x: %s\nAngles: %s %s %s\n", cam_pos_current->pos_x, cam_pos_current->pitch, cam_pos_current->yaw, cam_pos_current->roll);
+				//Com_Printf("=== Actual ======\nPos-x: %s\nAngles: %s %s %s\n", cam_pos_current->pos_x, myftos(cl.viewangles[0]), myftos(cl.viewangles[1]), myftos(cl.viewangles[2]));
 				// Wait until we are really sure we're in the right position...
 				if (strcmp(myftos(cl.simorg[0]), cam_pos_current->pos_x) == 0) {
-					
+
 					// Take screenshot
 					Cbuf_AddText(va("screenshot\n"));
 

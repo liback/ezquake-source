@@ -57,6 +57,9 @@ struct cam_positions {
 	char *pos_y;
 	char *pos_x;
 	char *pos_z;
+	char *pitch;
+	char *yaw;
+	char *roll;
 
 	struct cam_positions *next;
 };
@@ -857,6 +860,9 @@ void CL_InitCam(void)
 	char *coord_x;
 	char *coord_y;
 	char *coord_z;
+	char *pitch;
+	char *yaw;
+	char *roll;
 
 	int field = 0;
 
@@ -892,6 +898,15 @@ void CL_InitCam(void)
 				if (field == 4)
 					coord_z = token;
 
+				if (field == 5)
+					pitch = token;
+
+				if (field == 6)
+					yaw = token;
+
+				if (field == 7)
+					roll = token;
+
 				token = strtok(NULL, seps);
 				field++;
 			}
@@ -902,6 +917,9 @@ void CL_InitCam(void)
 			cam_pos_new->pos_x 	= strdup(coord_x);
 			cam_pos_new->pos_y 	= strdup(coord_y);
 			cam_pos_new->pos_z 	= strdup(coord_z);
+			cam_pos_new->pitch 	= strdup(pitch);
+			cam_pos_new->yaw 	= strdup(yaw);
+			cam_pos_new->roll 	= strdup(roll);
 			cam_pos_new->next = NULL;
 
 			if (cam_pos_head == NULL) {
@@ -913,7 +931,7 @@ void CL_InitCam(void)
 			//Com_Printf("cam pos loaded %i: %s %s %s %s\n", cam_pos_new, cam_pos_new->map, cam_pos_new->pos_x, cam_pos_new->pos_y, cam_pos_new->pos_z);
 			//Cbuf_AddText(va("screenshot\n"));
 
-			id = map = coord_x = coord_y = coord_z = NULL;
+			id = map = coord_x = coord_y = coord_z = pitch = yaw = roll = NULL;
 			field = 0;
 		}
 		fclose(common_file);
@@ -924,7 +942,7 @@ void CL_InitCam(void)
 
 	cam_pos_current = cam_pos_head;
 	while (cam_pos_current != NULL) {
-		Com_Printf("Pos %i: %s %s %s %s %s [next: %i]\n", cam_pos_current, cam_pos_current->id, cam_pos_current->map, cam_pos_current->pos_x, cam_pos_current->pos_y, cam_pos_current->pos_z, cam_pos_current->next);
+		Com_Printf("Pos %i: %s %s %s %s %s %s %s %s [next: %i]\n", cam_pos_current, cam_pos_current->id, cam_pos_current->map, cam_pos_current->pos_x, cam_pos_current->pos_y, cam_pos_current->pos_z, cam_pos_current->pitch, cam_pos_current->yaw, cam_pos_current->roll, cam_pos_current->next);
 		cam_pos_current = cam_pos_current->next;
 	}
 	/*
@@ -937,33 +955,41 @@ void CL_InitCam(void)
 
 void Cam_Auto_Screenshots_f (void)
 {
-
 	// Todo: make this use a linked list instead and use it in the game loop?
-	Com_Printf("===== SAVED CAM POSITIONS: =====\n");
-	Com_Printf("Head is: %i\n", cam_pos_head);
+	//Com_Printf("===== SAVED CAM POSITIONS: =====\n");
+	//Com_Printf("Head is: %i\n", cam_pos_head);
+	/*
 	for (cam_pos_current = cam_pos_head; cam_pos_current; cam_pos_current = cam_pos_current->next) {
 		Com_Printf("Pos %i: %s %s %s %s %s\n", cam_pos_current, cam_pos_current->id, cam_pos_current->map, cam_pos_current->pos_x, cam_pos_current->pos_y, cam_pos_current->pos_z);
 	}
+	*/
 	cam_pos_current = cam_pos_head;
+	
 	cls.screenshot_session = 1;
-
 }
 
 static void Cam_Save_Pos_To_File_f (void)
 {
 	// File handling vars 
-	FILE *common_file;
+	FILE *cam_pos_file;
 	char buffer[BUFSIZ];
 
-	common_file = fopen("cam_positions.txt", "a");
+	cam_pos_file = fopen("cam_positions.txt", "a");
 	
-	if (common_file == NULL) {
+	if (cam_pos_file == NULL) {
 		Com_Printf("Error : Failed to open common_file - %s\n", strerror(errno));
 	} else {
-		fprintf(common_file, "%s,%s,%s,%s\n", host_mapname.string, myftos(cl.simorg[0]), myftos(cl.simorg[1]), myftos(cl.simorg[2]));
-		Com_Printf ("\"%s %s %s\"\n", myftos(cl.simorg[0]), myftos(cl.simorg[1]), myftos(cl.simorg[2]));
+		Com_Printf("=== Position saved - details below ===\n");
+		//fprintf(cam_pos_file, 	"%s,%s,%s,%s,%s,%s,%s\n", 								host_mapname.string, myftos(cl.simorg[0]), myftos(cl.simorg[1]), myftos(cl.simorg[2]), myftos(cl.viewangles[0]), myftos(cl.viewangles[1]), myftos(cl.viewangles[2]));
+
+		fprintf(cam_pos_file, 	"%s,%s,%s,%s,", host_mapname.string, myftos(cl.simorg[0]), myftos(cl.simorg[1]), myftos(cl.simorg[2]));
+		fprintf(cam_pos_file, 	"%s,%s,%s\n", myftos(cl.viewangles[0]), myftos(cl.viewangles[1]), myftos(cl.viewangles[2]));
+
+		Com_Printf("%s,%s,%s,%s,", host_mapname.string, myftos(cl.simorg[0]), myftos(cl.simorg[1]), myftos(cl.simorg[2]));
+		Com_Printf("%s,%s,%s\n", myftos(cl.viewangles[0]), myftos(cl.viewangles[1]), myftos(cl.viewangles[2]));		
+		//Com_Printf ("Map: %s\n X: %s\n Y: %s\n Z: %s\n Pit: %s\n Yaw: %s\n Rll: %s\n", 	host_mapname.string, myftos(cl.simorg[0]), myftos(cl.simorg[1]), myftos(cl.simorg[2]), myftos(cl.viewangles[0]), myftos(cl.viewangles[1]), myftos(cl.viewangles[2]));
 		
-		fclose(common_file);
+		fclose(cam_pos_file);
 	}
 }
 
