@@ -49,6 +49,24 @@ double cam_lastviewtime;
 int spec_track = 0;				// player# of who we are tracking
 int autocam = CAM_NONE;
 
+// Cam positions holds the data
+// read in from text file.
+struct cam_positions {
+	char *id;
+	char *map;
+	char *pos_y;
+	char *pos_x;
+	char *pos_z;
+
+	struct cam_positions *next;
+};
+
+struct cam_positions *cam_pos_current = NULL;
+struct cam_positions *cam_pos_head = NULL;
+
+static void Cam_Save_Pos_To_File_f(void);
+static void Cam_Auto_Screenshots_f(void);
+
 void CL_TrackMV1_f(void);
 void CL_TrackMV2_f(void);
 void CL_TrackMV3_f(void);
@@ -669,7 +687,7 @@ void Cam_TryLock (void) {
 
 
 #ifdef JSS_CAM
-static char *myftos (float f)
+char *myftos (float f)
 {
 #define MAX_VAL 128
 	static char buf[4][MAX_VAL];
@@ -806,6 +824,10 @@ void CL_InitCam(void)
 	Cmd_AddCommand ("track4", CL_TrackMV4_f);
 	Cmd_AddCommand ("trackteam", CL_TrackTeam_f);	
  
+	// Liback map screenshot cam
+	Cmd_AddCommand ("cam_save_pos_to_file", Cam_Save_Pos_To_File_f);
+	Cmd_AddCommand ("cam_auto_screenshots", Cam_Auto_Screenshots_f);
+
  #ifdef JSS_CAM
 	Cmd_AddCommand ("cam_pos", Cam_Pos_f);
 	Cmd_AddCommand ("cam_angles", Cam_Angles_f);
@@ -822,6 +844,127 @@ void CL_InitCam(void)
 	// Multiview tracking.	
 	memset(mv_trackslots, -1, sizeof(mv_trackslots));
 	mv_skinsforced = false;
+
+
+
+
+	// File handling vars 
+	FILE *common_file;
+	char buffer[BUFSIZ];
+
+	char *id;
+	char *map;
+	char *coord_x;
+	char *coord_y;
+	char *coord_z;
+
+	int field = 0;
+
+	common_file = fopen("cam_positions.txt", "r");
+	
+	// To parse the CSV
+	char tempBuf[100];
+	char seps[] = ",";
+	char *token;
+	
+
+	if (common_file == NULL) {
+		Com_Printf("Error : Failed to open common_file - %s\n", strerror(errno));
+	} else {
+		while (fgets(buffer, BUFSIZ, common_file) != NULL) {
+
+			strcpy(tempBuf, buffer);
+
+			token = strtok(tempBuf, seps);
+			while (token != NULL) {
+				if (field == 0)
+					id = token;
+
+				if (field == 1)
+					map = token;
+
+				if (field == 2)
+					coord_x = token;
+
+				if (field == 3)
+					coord_y = token;
+
+				if (field == 4)
+					coord_z = token;
+
+				token = strtok(NULL, seps);
+				field++;
+			}
+
+			struct cam_positions *cam_pos_new = malloc(sizeof(struct cam_positions));
+			cam_pos_new->id 	= strdup(id);
+			cam_pos_new->map 	= strdup(map);
+			cam_pos_new->pos_x 	= strdup(coord_x);
+			cam_pos_new->pos_y 	= strdup(coord_y);
+			cam_pos_new->pos_z 	= strdup(coord_z);
+			cam_pos_new->next = NULL;
+
+			if (cam_pos_head == NULL) {
+				cam_pos_current = cam_pos_head = cam_pos_new;
+			} else {
+				cam_pos_current = cam_pos_current->next = cam_pos_new;
+			}
+
+			//Com_Printf("cam pos loaded %i: %s %s %s %s\n", cam_pos_new, cam_pos_new->map, cam_pos_new->pos_x, cam_pos_new->pos_y, cam_pos_new->pos_z);
+			//Cbuf_AddText(va("screenshot\n"));
+
+			id = map = coord_x = coord_y = coord_z = NULL;
+			field = 0;
+		}
+		fclose(common_file);
+	}
+
+	Com_Printf("========= SAVED CAM POSITIONS INIT DONE =====\n");
+	Com_Printf("Head is: %i\n", cam_pos_head);
+
+	cam_pos_current = cam_pos_head;
+	while (cam_pos_current != NULL) {
+		Com_Printf("Pos %i: %s %s %s %s %s [next: %i]\n", cam_pos_current, cam_pos_current->id, cam_pos_current->map, cam_pos_current->pos_x, cam_pos_current->pos_y, cam_pos_current->pos_z, cam_pos_current->next);
+		cam_pos_current = cam_pos_current->next;
+	}
+	/*
+	for (cam_pos_current = cam_pos_head; cam_pos_current; cam_pos_current = cam_pos_current->next) {
+		Com_Printf("Pos %i: %s %s %s %s [next: %i]\n", cam_pos_current, cam_pos_current->map, cam_pos_current->pos_x, cam_pos_current->pos_y, cam_pos_current->pos_z, cam_pos_current->next);
+	}
+	*/
+
+}
+
+void Cam_Auto_Screenshots_f (void)
+{
+
+	// Todo: make this use a linked list instead and use it in the game loop?
+	Com_Printf("===== SAVED CAM POSITIONS: =====\n");
+	Com_Printf("Head is: %i\n", cam_pos_head);
+	for (cam_pos_current = cam_pos_head; cam_pos_current; cam_pos_current = cam_pos_current->next) {
+		Com_Printf("Pos %i: %s %s %s %s %s\n", cam_pos_current, cam_pos_current->id, cam_pos_current->map, cam_pos_current->pos_x, cam_pos_current->pos_y, cam_pos_current->pos_z);
+	}
+	cam_pos_current = cam_pos_head;
+	cls.screenshot_session = 1;
+
+}
+
+static void Cam_Save_Pos_To_File_f (void)
+{
+	// File handling vars 
+	FILE *common_file;
+	char buffer[BUFSIZ];
+
+	common_file = fopen("cam_positions.txt", "a");
+	
+	if (common_file == NULL) {
+		Com_Printf("Error : Failed to open common_file - %s\n", strerror(errno));
+	} else {
+		fprintf(common_file, "%s,%s,%s,%s\n", host_mapname.string, myftos(cl.simorg[0]), myftos(cl.simorg[1]), myftos(cl.simorg[2]));
+		Com_Printf ("\"%s %s %s\"\n", myftos(cl.simorg[0]), myftos(cl.simorg[1]), myftos(cl.simorg[2]));
+		
+		fclose(common_file);
+	}
 }
 
 //

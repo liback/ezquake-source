@@ -434,7 +434,8 @@ typedef struct
 
 	int			lasttype;		///< The type of the last demo message.
 	qbool		findtrack;
-
+	int 		screenshot_session;
+	char*		screenshot_cur_cam_pos_id;
 } clientPersistent_t;
 
 extern clientPersistent_t	cls;

@@ -70,6 +70,24 @@ extern qbool ActiveApp, Minimized;
 
 static void Cl_Reset_Min_fps_f(void);
 
+
+
+
+struct cam_positions {
+	char *id;
+	char *map;
+	char *pos_y;
+	char *pos_x;
+	char *pos_z;
+
+	struct cam_positions *next;
+};
+extern struct cam_positions *cam_pos_current;
+extern struct cam_positions *cam_pos_head;
+
+char *myftos(float f);
+
+
 cvar_t	allow_scripts = {"allow_scripts", "2", 0, Rulesets_OnChange_allow_scripts};
 cvar_t	rcon_password = {"rcon_password", ""};
 cvar_t	rcon_address = {"rcon_address", ""};
@@ -2014,6 +2032,9 @@ void CL_Init (void)
 	// set. Changing the directory makes sure it starts out in the directory where ezquake 
 	// is located.
 	Sys_chdir(com_basedir);
+	
+	cls.screenshot_session = 0;
+	cls.screenshot_cur_cam_pos_id = 0;
 
 	cls.state = ca_disconnected;
 	cls.min_fps = 999999;
@@ -2323,6 +2344,45 @@ void CL_Frame (double time)
 		host_skipframe = false;
 	}
 
+	if (cls.screenshot_session == 1) {
+		//Com_Printf("Screenshot session activated\n");
+		//Com_Printf("Reading pos: %s %s %s %s\n", cam_pos_current->map, cam_pos_current->pos_x, cam_pos_current->pos_y, cam_pos_current->pos_z);
+		
+		if (strcmp(cam_pos_current->map, sv.mapname) == 0) {
+			
+			// Some delay to get rid of the console blocking our view
+			if (sv.time > 10 && cls.state >= ca_active) {
+				
+				// Set camera position
+				Cbuf_AddText(va("cam_pos %s %s %s\n", cam_pos_current->pos_x, cam_pos_current->pos_y, cam_pos_current->pos_z));
+				
+				// Wait until we are really sure we're in the right position...
+				if (strcmp(myftos(cl.simorg[0]), cam_pos_current->pos_x) == 0) {
+					
+					// Take screenshot
+					Cbuf_AddText(va("screenshot\n"));
+
+					// Move to next saved cam pos in file
+					if (cam_pos_current->next != NULL) {
+						cam_pos_current = cam_pos_current->next;
+					} else {
+						cls.screenshot_session = 0;
+					}
+
+				}	
+
+			}
+
+		} else {
+			// If we're not on the same map as the current
+			// cam position from the file is for, we change map
+			Cbuf_AddText(va("map %s\n", cam_pos_current->map));
+		}
+		
+		//Cbuf_AddText(va("cam_pos %s %s %s\n", cam_pos_current->pos_x, cam_pos_current->pos_y, cam_pos_current->pos_z));
+
+	}
+
 	cls.realtime += cls.frametime;
 
 	if (!ISPAUSED) 
@@ -2578,6 +2638,8 @@ void CL_Frame (double time)
 	SB_ExecuteQueuedTriggers();
 
 	CL_UpdateCaption(false);
+
+	
 }
 
 //============================================================================
