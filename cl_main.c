@@ -2368,7 +2368,7 @@ void CL_Frame (double time)
 				if (strcmp(myftos(cl.simorg[0]), cam_pos_current->pos_x) == 0) {
 
 					// Take screenshot
-					Cbuf_AddText(va("screenshot\n"));
+					Cbuf_AddText(va("screenshot %s-%s\n", cam_pos_current->id, cam_pos_current->map));
 
 					// Move to next saved cam pos in file
 					if (cam_pos_current->next != NULL) {
