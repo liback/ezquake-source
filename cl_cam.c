@@ -64,8 +64,9 @@ struct cam_positions {
 	struct cam_positions *next;
 };
 
-struct cam_positions *cam_pos_current = NULL;
 struct cam_positions *cam_pos_head = NULL;
+struct cam_positions *cam_pos_current = NULL;
+
 
 static void Cam_Pos_Free_All();
 static void Cam_Pos_Load_From_File(void);
@@ -74,6 +75,8 @@ static void Cam_Pos_Save_To_File_f(void);
 void Cam_Auto_Screenshot(char* current_map, int curr_sv_time);
 void Cam_Pos_Start_Screenshooter_f(void);
 void Cam_Pos_Stop_Screenshooter_f(void);
+
+static int stop_screenshooter = 0;
 
 // Remove?
 static void Cam_Pos_Count_f(void);
@@ -896,6 +899,10 @@ void Cam_Auto_Screenshot (char *curr_map, int curr_sv_time)
 
 			}	
 
+		} else if (stop_screenshooter == 1) {
+			cls.screenshot_session = 0;
+			Cam_Pos_Free_All();
+			stop_screenshooter = 0;
 		}
 
 	} else {
@@ -954,30 +961,6 @@ static void Cam_Pos_List_f(void)
 
 		cam_pos_current = cam_pos_current->next;
 	}	
-}
-
-static void Cam_Pos_Free_All () 
-{
-	cam_pos_current = cam_pos_head;
-	struct cam_positions *next;
-	Com_Printf("Starting cam_pos_free_all...\n");
-	while (cam_pos_current != NULL) {
-		next = cam_pos_current->next;
-
-			free(cam_pos_current->id);
-			free(cam_pos_current->map);
-			free(cam_pos_current->pos_x);
-			free(cam_pos_current->pos_y);
-			free(cam_pos_current->pos_z);
-			free(cam_pos_current->pitch);
-			free(cam_pos_current->yaw);
-			free(cam_pos_current->roll);
-			free(cam_pos_current->next);
-			free(cam_pos_current);
-			cam_pos_current = next;
-	}
-	Com_Printf("Done with cam_pos_free_all!\n");
-
 }
 
 static void Cam_Pos_Load_From_File (void)
@@ -1142,8 +1125,35 @@ void Cam_Pos_Start_Screenshooter_f(void)
 
 void Cam_Pos_Stop_Screenshooter_f(void)
 {
-	cls.screenshot_session = 0;
-	Cam_Pos_Free_All();
+	stop_screenshooter = 1;
+}
+
+
+static void Cam_Pos_Free_All (void) 
+{
+	cam_pos_current = cam_pos_head;
+	struct cam_positions *temp;
+	Com_Printf("Starting cam_pos_free_all...\n");
+	
+	while (cam_pos_current != NULL) {
+		temp = cam_pos_current;
+		cam_pos_current = cam_pos_current->next;
+		
+		free(temp->next);
+		free(temp->roll);
+		free(temp->yaw);
+		free(temp->pitch);
+		free(temp->pos_z);
+		free(temp->pos_y);
+		free(temp->pos_x);
+		free(temp->map);
+		free(temp->id);
+		free(temp);
+	}
+	cam_pos_head = NULL;
+
+	//cam_pos_current = cam_pos_head = NULL;
+	Com_Printf("Done with cam_pos_free_all!\n");
 }
 
 //
