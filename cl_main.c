@@ -2347,48 +2347,9 @@ void CL_Frame (double time)
 		host_skipframe = false;
 	}
 
+	// Liback's screenshooter
 	if (cls.screenshot_session == 1) {
-		//Com_Printf("Screenshot session activated\n");
-		//Com_Printf("Reading pos: %s %s %s %s\n", cam_pos_current->map, cam_pos_current->pos_x, cam_pos_current->pos_y, cam_pos_current->pos_z);
-		
-		if (strcmp(cam_pos_current->map, sv.mapname) == 0) {
-			
-			// Some delay to get rid of the console blocking our view
-			if ((sv.time > 2 && cls.state >= ca_active) && (sv.time - cls.last_screenshot_time > 2)) {
-				
-				// Set camera position
-				Cbuf_AddText(va("cam_pos %s %s %s\n", cam_pos_current->pos_x, cam_pos_current->pos_y, cam_pos_current->pos_z));
-				
-				// Set camera angles
-				Cbuf_AddText(va("cam_angles %s %s %s\n", cam_pos_current->pitch, cam_pos_current->yaw, cam_pos_current->roll));
-				
-				//Com_Printf("=== From File ===\nPos-x: %s\nAngles: %s %s %s\n", cam_pos_current->pos_x, cam_pos_current->pitch, cam_pos_current->yaw, cam_pos_current->roll);
-				//Com_Printf("=== Actual ======\nPos-x: %s\nAngles: %s %s %s\n", cam_pos_current->pos_x, myftos(cl.viewangles[0]), myftos(cl.viewangles[1]), myftos(cl.viewangles[2]));
-				// Wait until we are really sure we're in the right position...
-				if (strcmp(myftos(cl.simorg[0]), cam_pos_current->pos_x) == 0) {
-
-					// Take screenshot
-					Cbuf_AddText(va("screenshot %s-%s\n", cam_pos_current->id, cam_pos_current->map));
-
-					// Move to next saved cam pos in file
-					if (cam_pos_current->next != NULL) {
-						cam_pos_current = cam_pos_current->next;
-					} else {
-						cls.screenshot_session = 0;
-					}
-
-				}	
-
-			}
-
-		} else {
-			// If we're not on the same map as the current
-			// cam position from the file is for, we change map
-			Cbuf_AddText(va("map %s\n", cam_pos_current->map));
-		}
-		
-		//Cbuf_AddText(va("cam_pos %s %s %s\n", cam_pos_current->pos_x, cam_pos_current->pos_y, cam_pos_current->pos_z));
-
+		Cam_Auto_Screenshot(sv.mapname, sv.time);
 	}
 
 	cls.realtime += cls.frametime;
