@@ -49,11 +49,6 @@ double cam_lastviewtime;
 int spec_track = 0;				// player# of who we are tracking
 int autocam = CAM_NONE;
 
-
-
-
-
-
 // Cam positions holds the data
 // read in from text file.
 typedef struct cam_positions {
@@ -82,16 +77,9 @@ void Cam_Auto_Screenshot(char* current_map, int curr_sv_time);
 void Cam_Pos_Start_Screenshooter_f(void);
 void Cam_Pos_Stop_Screenshooter_f(void);
 
-static int stop_screenshooter = 0;
-
 // Remove?
 static void Cam_Pos_Count_f(void);
 static void Cam_Pos_List_f(void);
-
-
-
-
-
 
 void CL_TrackMV1_f(void);
 void CL_TrackMV2_f(void);
