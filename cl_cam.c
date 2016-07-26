@@ -882,13 +882,9 @@ void CL_InitCam(void)
 
 void Cam_Auto_Screenshot (char *curr_map, int curr_sv_time)
 {
-
 	struct cam_positions *curr = cam_pos_current;
-	//Com_Printf("Screenshot session activated\n");
-	//Com_Printf("Reading pos: %s %s %s %s\n", cam_pos_current->map, cam_pos_current->pos_x, cam_pos_current->pos_y, cam_pos_current->pos_z);
-	if (strcmp(cam_pos_current->map, curr_map) == 0) {
 
-		
+	if (strcmp(cam_pos_current->map, curr_map) == 0) {
 
 		// Some delay to get rid of the console blocking our view
 		if ((curr_sv_time > 2 && cls.state >= ca_active) && (curr_sv_time - cls.last_screenshot_time > 2)) {
@@ -899,8 +895,6 @@ void Cam_Auto_Screenshot (char *curr_map, int curr_sv_time)
 			// Set camera angles
 			Cbuf_AddText(va("cam_angles %s %s %s\n", curr->pitch, curr->yaw, curr->roll));
 			
-			//Com_Printf("=== From File ===\nPos-x: %s\nAngles: %s %s %s\n", cam_pos_current->pos_x, cam_pos_current->pitch, cam_pos_current->yaw, cam_pos_current->roll);
-			//Com_Printf("=== Actual ======\nPos-x: %s\nAngles: %s %s %s\n", cam_pos_current->pos_x, myftos(cl.viewangles[0]), myftos(cl.viewangles[1]), myftos(cl.viewangles[2]));
 			// Wait until we are really sure we're in the right position...
 			if (	strcmp(myftos(cl.simorg[0]), curr->pos_x) == 0
 				&& 	strcmp(myftos(cl.simorg[1]), curr->pos_y) == 0 
@@ -927,8 +921,6 @@ void Cam_Auto_Screenshot (char *curr_map, int curr_sv_time)
 		// cam position from the file is for, we change map
 		Cbuf_AddText(va("map %s\n", curr->map));
 	}
-	
-	//Cbuf_AddText(va("cam_pos %s %s %s\n", cam_pos_current->pos_x, cam_pos_current->pos_y, cam_pos_current->pos_z));	
 }
 
 int Cam_Count_Pos(struct cam_positions *head) 
@@ -1070,17 +1062,6 @@ static void Cam_Pos_Save_To_File_f (void)
 	// File handling vars
 	char buffer[BUFSIZ];
 
-	/*
-	// Cam pos data
-	char id[4];
-	char map[10];
-	char coord_x[10];
-	char coord_y[10];
-	char coord_z[10];
-	char pitch[10];
-	char yaw[10];
-	char roll[10];	
-	*/
 	cam_pos_file = fopen("cam_positions.txt", "a");
 
 	if (cam_pos_file == NULL) {
@@ -1094,36 +1075,7 @@ static void Cam_Pos_Save_To_File_f (void)
 		fprintf(cam_pos_file, "%.0f,%.0f,%.0f\n", cl.viewangles[0], cl.viewangles[1], cl.viewangles[2]);
 
 		Com_Printf("%s,%s,%s,%s,", host_mapname.string, myftos(cl.simorg[0]), myftos(cl.simorg[1]), myftos(cl.simorg[2]));
-		Com_Printf("%s,%s,%s\n", myftos(cl.viewangles[0]), myftos(cl.viewangles[1]), myftos(cl.viewangles[2]));		
-
-		/*
-		sprintf(id, 		"%i", 	new_id);
-		sprintf(map, 		"%s", 	host_mapname.string);
-		sprintf(coord_x, 	"%.0f", cl.simorg[0]);
-		sprintf(coord_y, 	"%.0f", cl.simorg[1]);
-		sprintf(coord_z, 	"%.0f", cl.simorg[2]);
-		sprintf(pitch, 		"%.0f", cl.viewangles[0]);
-		sprintf(yaw, 		"%.0f", cl.viewangles[1]);		
-		sprintf(roll, 		"%.0f", cl.viewangles[2]);
-
-		// Save to the linked list
-		struct cam_positions *cam_pos_new = malloc(sizeof(struct cam_positions));
-		cam_pos_new->id 	= strdup(id);
-		cam_pos_new->map 	= strdup(map);
-		cam_pos_new->pos_x 	= strdup(coord_x);
-		cam_pos_new->pos_y 	= strdup(coord_y);
-		cam_pos_new->pos_z 	= strdup(coord_z);
-		cam_pos_new->pitch 	= strdup(pitch);
-		cam_pos_new->yaw 	= strdup(yaw);
-		cam_pos_new->roll 	= strdup(roll);
-		cam_pos_new->next 	= NULL;
-
-		if (cam_pos_head == NULL) {
-			cam_pos_current = cam_pos_head = cam_pos_new;
-		} else {
-			cam_pos_current = cam_pos_current->next = cam_pos_new;
-		}
-		*/	
+		Com_Printf("%s,%s,%s\n", myftos(cl.viewangles[0]), myftos(cl.viewangles[1]), myftos(cl.viewangles[2]));
 		
 		fclose(cam_pos_file);
 	}
@@ -1145,8 +1097,7 @@ void Cam_Pos_Stop_Screenshooter_f(void)
 		cls.screenshot_session = 0;
 	}
 
-	if (cam_pos_head != NULL)
-		Cam_Pos_Free_All();
+	Cam_Pos_Free_All();
 }
 
 static void Cam_Pos_Free (struct cam_positions *cam_pos) 
@@ -1165,22 +1116,21 @@ static void Cam_Pos_Free (struct cam_positions *cam_pos)
 
 static void Cam_Pos_Free_All (void) 
 {
-	if (cam_pos_head == NULL)
-		return;
-
-	cam_pos_current = cam_pos_head;
-	struct cam_positions *temp;
-	Com_Printf("Starting cam_pos_free_all...\n");
-	
-	while (cam_pos_current != NULL) {
-		temp = cam_pos_current;
-		cam_pos_current = cam_pos_current->next;
-		Cam_Pos_Free(temp);
+	if (cam_pos_head != NULL) {
+		cam_pos_current = cam_pos_head;
+		struct cam_positions *temp;
+		Com_Printf("Starting cam_pos_free_all...\n");
+		
+		while (cam_pos_current != NULL) {
+			temp = cam_pos_current;
+			cam_pos_current = cam_pos_current->next;
+			Cam_Pos_Free(temp);
+		}
+		cam_pos_current = NULL;
+		cam_pos_head = NULL;
+		
+		Com_Printf("Done with cam_pos_free_all!\n");
 	}
-	cam_pos_current = NULL;
-	cam_pos_head = NULL;
-	
-	Com_Printf("Done with cam_pos_free_all!\n");
 }
 
 //
