@@ -68,6 +68,7 @@ struct cam_positions *cam_pos_head = NULL;
 struct cam_positions *cam_pos_current = NULL;
 
 static FILE *cam_pos_file;
+static int screenshooter_paused = 0;
 
 static void Cam_Pos_Free_All(void);
 static void Cam_Pos_Load_From_File(void);
@@ -76,6 +77,7 @@ static void Cam_Pos_Save_To_File_f(void);
 void Cam_Auto_Screenshot(char* current_map, int curr_sv_time);
 void Cam_Pos_Start_Screenshooter_f(void);
 void Cam_Pos_Stop_Screenshooter_f(void);
+void Cam_Pos_Pause_Screenshooter_f(void);
 
 // Remove?
 static void Cam_Pos_Count_f(void);
@@ -842,6 +844,7 @@ void CL_InitCam(void)
 	Cmd_AddCommand ("cam_pos_save_to_file", Cam_Pos_Save_To_File_f);
 	Cmd_AddCommand ("cam_pos_start_screenshooter", Cam_Pos_Start_Screenshooter_f);
 	Cmd_AddCommand ("cam_pos_stop_screenshooter", Cam_Pos_Stop_Screenshooter_f);
+	Cmd_AddCommand ("cam_pos_pause_screenshooter", Cam_Pos_Pause_Screenshooter_f);
 
 	Cmd_AddCommand ("cam_pos_free_all", Cam_Pos_Free_All);				// TODO: Remove - only for debugging
 	Cmd_AddCommand ("cam_pos_load_from_file", Cam_Pos_Load_From_File);	// TODO: Remove - only for debugging
@@ -868,49 +871,62 @@ void CL_InitCam(void)
 	mv_skinsforced = false;
 }
 
+/***
+*
+*	Handle an automatic screenshot if the feature is activated.
+*	This function is called in the CL_Frame() in cl_main.c.
+*
+***/
 void Cam_Auto_Screenshot (char *curr_map, int curr_sv_time)
 {
 	struct cam_positions *curr = cam_pos_current;
+	if (cls.screenshot_session == 1 && screenshooter_paused == 0) {
 
-	if (strcmp(cam_pos_current->map, curr_map) == 0) {
+		if (strcmp(cam_pos_current->map, curr_map) == 0) {
 
-		// Some delay to get rid of the console blocking our view
-		if ((curr_sv_time > 2 && cls.state >= ca_active) && (curr_sv_time - cls.last_screenshot_time > 2)) {
-			
-			// Set camera position
-			Cbuf_AddText(va("cam_pos %s %s %s\n", curr->pos_x, curr->pos_y, curr->pos_z));
-			
-			// Set camera angles
-			Cbuf_AddText(va("cam_angles %s %s %s\n", curr->pitch, curr->yaw, curr->roll));
-			
-			// Wait until we are really sure we're in the right position...
-			if (	strcmp(myftos(cl.simorg[0]), curr->pos_x) == 0
-				&& 	strcmp(myftos(cl.simorg[1]), curr->pos_y) == 0 
-				&& 	strcmp(myftos(cl.simorg[2]), curr->pos_z) == 0) {
+			// Some delay to get rid of the console blocking our view
+			if ((curr_sv_time > 2 && cls.state >= ca_active) && (curr_sv_time - cls.last_screenshot_time > 2)) {
+				
+				// Set camera position
+				Cbuf_AddText(va("cam_pos %s %s %s\n", curr->pos_x, curr->pos_y, curr->pos_z));
+				
+				// Set camera angles
+				Cbuf_AddText(va("cam_angles %s %s %s\n", curr->pitch, curr->yaw, curr->roll));
+				
+				// Wait until we are really sure we're in the right position...
+				if (	strcmp(myftos(cl.simorg[0]), curr->pos_x) == 0
+					&& 	strcmp(myftos(cl.simorg[1]), curr->pos_y) == 0 
+					&& 	strcmp(myftos(cl.simorg[2]), curr->pos_z) == 0) {
 
-				// Take screenshot
-				Cbuf_AddText(va("screenshot %s-%s\n", curr->id, curr->map));
+					// Take screenshot
+					Cbuf_AddText(va("screenshot %s-%s\n", curr->id, curr->map));
 
-				// Move to next saved cam pos in file
-				if (cam_pos_current->next != NULL) {
-					cam_pos_current = cam_pos_current->next;
-				} else {
-					Com_Printf("Screenshooter ending session.\n");
-					cls.screenshot_session = 0;
-					Cam_Pos_Free_All();
-				}
+					// Move to next saved cam pos in file
+					if (cam_pos_current->next != NULL) {
+						cam_pos_current = cam_pos_current->next;
+					} else {
+						Com_Printf("Screenshooter ending session.\n");
+						cls.screenshot_session = 0;
+						Cam_Pos_Free_All();
+					}
 
-			}	
+				}	
 
+			}
+
+		} else {
+			// If we're not on the same map as the current
+			// cam position from the file is for, we change map
+			Cbuf_AddText(va("map %s\n", curr->map));
 		}
-
-	} else {
-		// If we're not on the same map as the current
-		// cam position from the file is for, we change map
-		Cbuf_AddText(va("map %s\n", curr->map));
 	}
 }
 
+/***
+*
+*	Return number of cam positions currently in the linked list.
+*
+***/
 int Cam_Count_Pos(struct cam_positions *head) 
 {
 	if (head == NULL)
@@ -918,11 +934,21 @@ int Cam_Count_Pos(struct cam_positions *head)
 	return (1 + Cam_Count_Pos(head->next));
 }
 
+/***
+*
+*	Print how many positions are currently in the linked list.
+*
+***/
 static void Cam_Pos_Count_f(void) 
 {
 	Com_Printf("Cam_count_pos: %i\n", Cam_Count_Pos(cam_pos_head));
 }
 
+/***
+*
+*	Print what positions are currently in the linked list.
+*
+***/
 static void Cam_Pos_List_f(void) 
 {
 	cam_pos_current = cam_pos_head;
@@ -960,6 +986,12 @@ static void Cam_Pos_List_f(void)
 	}	
 }
 
+/***
+*
+*	Load positions from a csv file on format:
+*	<map_name>,<pos_x>,<pos_y>,<pos_z>,<ang_pitch>,<ang_yaw>,<ang_roll>
+*
+***/
 static void Cam_Pos_Load_From_File (void)
 {
 	// File handling vars 
@@ -1045,6 +1077,12 @@ static void Cam_Pos_Load_From_File (void)
 	}
 }
 
+/***
+*
+*	Save positions to a csv file on format:
+*	<map_name>,<pos_x>,<pos_y>,<pos_z>,<ang_pitch>,<ang_yaw>,<ang_roll>
+*
+***/
 static void Cam_Pos_Save_To_File_f (void)
 {
 	// File handling vars
@@ -1069,14 +1107,25 @@ static void Cam_Pos_Save_To_File_f (void)
 	}
 }
 
+/***
+*
+*	Load positions from file and start screenshooter session.
+*
+***/
 void Cam_Pos_Start_Screenshooter_f(void)
 {
 	Com_Printf("Starting screenshooter...\n");
 	Cam_Pos_Load_From_File();
 	cam_pos_current = cam_pos_head;
 	cls.screenshot_session = 1;
+	screenshooter_paused = 0;
 }
 
+/***
+*
+* 	Stops screenshooter and resets the position list.
+*
+***/
 void Cam_Pos_Stop_Screenshooter_f(void)
 {
 	if (cls.screenshot_session == 0) {
@@ -1086,6 +1135,27 @@ void Cam_Pos_Stop_Screenshooter_f(void)
 	}
 
 	Cam_Pos_Free_All();
+}
+
+/***
+*
+* 	Pause the screenshooter with possibility to continue where
+*	one stopped.
+*
+***/
+void Cam_Pos_Pause_Screenshooter_f(void)
+{
+	if (cls.screenshot_session == 0) {
+		Com_Printf("Screenshooter not running - ignoring pause.\n");
+	} else {
+		if (screenshooter_paused == 0) {
+			screenshooter_paused = 1;
+			Com_Printf("Screenshooter paused.\n");
+		} else {
+			screenshooter_paused = 0;
+			Com_Printf("Screenshooter resumed.\n");
+		}
+	}
 }
 
 static void Cam_Pos_Free (struct cam_positions *cam_pos) 

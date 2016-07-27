@@ -2348,9 +2348,8 @@ void CL_Frame (double time)
 	}
 
 	// Liback's screenshooter
-	if (cls.screenshot_session == 1) {
-		Cam_Auto_Screenshot(sv.mapname, sv.time);
-	}
+	Cam_Auto_Screenshot(sv.mapname, sv.time);
+	
 
 	cls.realtime += cls.frametime;
 
