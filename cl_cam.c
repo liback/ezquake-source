@@ -1167,7 +1167,7 @@ void Cam_Pos_Pause_Screenshooter_f(void)
 
 static void Cam_Pos_Free (struct cam_positions *cam_pos) 
 {
-		Q_free(cam_pos->next); 	cam_pos->next 	= NULL;
+								cam_pos->next 	= NULL;
 		Q_free(cam_pos->roll); 	cam_pos->roll 	= NULL;
 		Q_free(cam_pos->yaw);	cam_pos->yaw 	= NULL;
 		Q_free(cam_pos->pitch);	cam_pos->pitch 	= NULL;
