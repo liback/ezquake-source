@@ -1010,7 +1010,7 @@ static void Cam_Pos_Load_From_File (void)
 
 	int field = 0;
 
-	cam_pos_file = fopen("cam_positions.txt", "r");
+	cam_pos_file = fopen("cam_positions.csv", "r");
 	
 	// To parse the CSV
 	char tempBuf[100];
@@ -1088,7 +1088,7 @@ static void Cam_Pos_Save_To_File_f (void)
 	// File handling vars
 	char buffer[BUFSIZ];
 
-	cam_pos_file = fopen("cam_positions.txt", "a");
+	cam_pos_file = fopen("cam_positions.csv", "a");
 
 	if (cam_pos_file == NULL) {
 		Com_Printf("Error : Failed to open common_file - %s\n", strerror(errno));
