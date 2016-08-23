@@ -70,6 +70,8 @@ struct cam_positions *cam_pos_current = NULL;
 static FILE *cam_pos_file;
 static int screenshooter_paused = 0;
 
+cvar_t cam_pos_file_format = {"cam_pos_file_format", "0"}; // All files end up in same folder
+
 static void Cam_Pos_Free_All(void);
 static void Cam_Pos_Load_From_File(void);
 static void Cam_Pos_Save_To_File_f(void);
@@ -841,6 +843,7 @@ void CL_InitCam(void)
 	Cmd_AddCommand ("trackteam", CL_TrackTeam_f);	
  
 	// Liback map screenshot cam
+	Cvar_Register (&cam_pos_file_format);
 	Cmd_AddCommand ("cam_pos_save_to_file", Cam_Pos_Save_To_File_f);
 	Cmd_AddCommand ("cam_pos_start_screenshooter", Cam_Pos_Start_Screenshooter_f);
 	Cmd_AddCommand ("cam_pos_stop_screenshooter", Cam_Pos_Stop_Screenshooter_f);
@@ -899,7 +902,11 @@ void Cam_Auto_Screenshot (char *curr_map, int curr_sv_time)
 					&& 	strcmp(myftos(cl.simorg[2]), curr->pos_z) == 0) {
 
 					// Take screenshot
-					Cbuf_AddText(va("screenshot %s-%s\n", curr->id, curr->map));
+					if (cam_pos_file_format.value == 1) {
+						Cbuf_AddText(va("screenshot %s/%s-%s\n",curr->map, curr->id, curr->map));
+					} else {
+						Cbuf_AddText(va("screenshot %s-%s\n", curr->id, curr->map));
+					}
 
 					// Move to next saved cam pos in file
 					if (cam_pos_current->next != NULL) {
