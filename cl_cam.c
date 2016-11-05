@@ -60,6 +60,7 @@ typedef struct cam_positions {
 	char *pitch;
 	char *yaw;
 	char *roll;
+	char *pos_type;
 
 	struct cam_positions *next;
 } cam_positions;
@@ -903,9 +904,9 @@ void Cam_Auto_Screenshot (char *curr_map, int curr_sv_time)
 
 					// Take screenshot
 					if (cam_pos_file_format.value == 1) {
-						Cbuf_AddText(va("screenshot %s/%s-%s\n",curr->map, curr->id, curr->map));
+						Cbuf_AddText(va("screenshot %s/%s-%s-%s\n",curr->map, curr->id, curr->map,curr->pos_type));
 					} else {
-						Cbuf_AddText(va("screenshot %s-%s\n", curr->id, curr->map));
+						Cbuf_AddText(va("screenshot %s-%s-%s\n", curr->id, curr->map, curr->pos_type));
 					}
 
 					// Move to next saved cam pos in file
@@ -917,7 +918,7 @@ void Cam_Auto_Screenshot (char *curr_map, int curr_sv_time)
 						Cam_Pos_Free_All();
 					}
 
-				}	
+				}
 
 			}
 
@@ -977,13 +978,15 @@ static void Cam_Pos_List_f(void)
 
 		Com_Printf(
 			"POS: %s %s %s\n"  
-			"ANG: %s %s %s\n",
+			"ANG: %s %s %s\n"
+			"TYP: %s\n",
 			cam_pos_current->pos_x,
 			cam_pos_current->pos_y, 
 			cam_pos_current->pos_z, 
 			cam_pos_current->pitch, 
 			cam_pos_current->yaw, 
-			cam_pos_current->roll
+			cam_pos_current->roll,
+			cam_pos_current->pos_type
 			);
 		
 		if (cam_pos_current->next == NULL)
@@ -996,7 +999,7 @@ static void Cam_Pos_List_f(void)
 /***
 *
 *	Load positions from a csv file on format:
-*	<map_name>,<pos_x>,<pos_y>,<pos_z>,<ang_pitch>,<ang_yaw>,<ang_roll>
+*	<map_name>,<pos_x>,<pos_y>,<pos_z>,<ang_pitch>,<ang_yaw>,<ang_roll>,<pos_type>
 *
 ***/
 static void Cam_Pos_Load_From_File (void)
@@ -1012,6 +1015,7 @@ static void Cam_Pos_Load_From_File (void)
 	char *pitch;
 	char *yaw;
 	char *roll;
+	char *pos_type;
 
 	int counter = 0;
 
@@ -1054,20 +1058,24 @@ static void Cam_Pos_Load_From_File (void)
 				if (field == 6)
 					roll = token;
 
+				if (field == 7)
+					pos_type = token;
+
 				token = strtok(NULL, seps);
 				field++;
 			}
 			
 			struct cam_positions *cam_pos_new = malloc(sizeof(struct cam_positions));
 			sprintf(id, "%i", counter);
-			cam_pos_new->id 	= strdup(id);
-			cam_pos_new->map 	= strdup(map);
-			cam_pos_new->pos_x 	= strdup(coord_x);
-			cam_pos_new->pos_y 	= strdup(coord_y);
-			cam_pos_new->pos_z 	= strdup(coord_z);
-			cam_pos_new->pitch 	= strdup(pitch);
-			cam_pos_new->yaw 	= strdup(yaw);
-			cam_pos_new->roll 	= strdup(roll);
+			cam_pos_new->id 		= strdup(id);
+			cam_pos_new->map 		= strdup(map);
+			cam_pos_new->pos_x 		= strdup(coord_x);
+			cam_pos_new->pos_y 		= strdup(coord_y);
+			cam_pos_new->pos_z 		= strdup(coord_z);
+			cam_pos_new->pitch 		= strdup(pitch);
+			cam_pos_new->yaw 		= strdup(yaw);
+			cam_pos_new->roll 		= strdup(roll);
+			cam_pos_new->pos_type 	= strdup(pos_type);
 			cam_pos_new->next = NULL;
 
 			if (cam_pos_head == NULL) {
@@ -1077,7 +1085,7 @@ static void Cam_Pos_Load_From_File (void)
 			}
 
 			// TODO: Remove ID?
-			map = coord_x = coord_y = coord_z = pitch = yaw = roll = 0;
+			map = coord_x = coord_y = coord_z = pitch = yaw = roll = pos_type = 0;
 			field = 0;
 		}
 		fclose(cam_pos_file);
@@ -1105,11 +1113,14 @@ static void Cam_Pos_Save_To_File_f (void)
 		int new_id = Cam_Count_Pos(cam_pos_head) + 1;
 
 		fprintf(cam_pos_file, "%s,%.0f,%.0f,%.0f,", host_mapname.string, cl.simorg[0], cl.simorg[1], cl.simorg[2]);
-		fprintf(cam_pos_file, "%.0f,%.0f,%.0f\n", cl.viewangles[0], cl.viewangles[1], cl.viewangles[2]);
-
-		Com_Printf("%s,%s,%s,%s,", host_mapname.string, myftos(cl.simorg[0]), myftos(cl.simorg[1]), myftos(cl.simorg[2]));
-		Com_Printf("%s,%s,%s\n", myftos(cl.viewangles[0]), myftos(cl.viewangles[1]), myftos(cl.viewangles[2]));
+		fprintf(cam_pos_file, "%.0f,%.0f,%.0f,", cl.viewangles[0], cl.viewangles[1], cl.viewangles[2]);
+		fprintf(cam_pos_file, "%s\n", "custom");
 		
+
+		Com_Printf("%s, %s, %s, %s, ", host_mapname.string, myftos(cl.simorg[0]), myftos(cl.simorg[1]), myftos(cl.simorg[2]));
+		Com_Printf("%s, %s, %s, ", myftos(cl.viewangles[0]), myftos(cl.viewangles[1]), myftos(cl.viewangles[2]));
+		Com_Printf("%s\n", "custom");
+
 		fclose(cam_pos_file);
 	}
 }
@@ -1167,16 +1178,17 @@ void Cam_Pos_Pause_Screenshooter_f(void)
 
 static void Cam_Pos_Free (struct cam_positions *cam_pos) 
 {
-								cam_pos->next 	= NULL;
-		Q_free(cam_pos->roll); 	cam_pos->roll 	= NULL;
-		Q_free(cam_pos->yaw);	cam_pos->yaw 	= NULL;
-		Q_free(cam_pos->pitch);	cam_pos->pitch 	= NULL;
-		Q_free(cam_pos->pos_z);	cam_pos->pos_z 	= NULL;
-		Q_free(cam_pos->pos_y);	cam_pos->pos_y 	= NULL;
-		Q_free(cam_pos->pos_x);	cam_pos->pos_x 	= NULL;
-		Q_free(cam_pos->map);	cam_pos->map 	= NULL;
-		Q_free(cam_pos->id);	cam_pos->id 	= NULL;
-		Q_free(cam_pos);		cam_pos 		= NULL;
+									cam_pos->next 		= NULL;
+		Q_free(cam_pos->pos_type); 	cam_pos->pos_type 	= NULL;
+		Q_free(cam_pos->roll); 		cam_pos->roll 		= NULL;
+		Q_free(cam_pos->yaw);		cam_pos->yaw 		= NULL;
+		Q_free(cam_pos->pitch);		cam_pos->pitch 		= NULL;
+		Q_free(cam_pos->pos_z);		cam_pos->pos_z 		= NULL;
+		Q_free(cam_pos->pos_y);		cam_pos->pos_y 		= NULL;
+		Q_free(cam_pos->pos_x);		cam_pos->pos_x 		= NULL;
+		Q_free(cam_pos->map);		cam_pos->map 		= NULL;
+		Q_free(cam_pos->id);		cam_pos->id 		= NULL;
+		Q_free(cam_pos);			cam_pos 			= NULL;
 }
 
 static void Cam_Pos_Free_All (void) 
