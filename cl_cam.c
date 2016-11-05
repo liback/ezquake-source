@@ -961,6 +961,11 @@ static void Cam_Pos_List_f(void)
 {
 	cam_pos_current = cam_pos_head;
 
+	if (cam_pos_current == NULL) {
+		Com_Printf("In-memory list is empty.\n");
+		return;
+	}
+
 	while (true) {
 		if (cam_pos_current == NULL)
 			break;
