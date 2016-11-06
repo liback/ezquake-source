@@ -904,9 +904,9 @@ void Cam_Auto_Screenshot (char *curr_map, int curr_sv_time)
 
 					// Take screenshot
 					if (cam_pos_file_format.value == 1) {
-						Cbuf_AddText(va("screenshot %s/%s-%s-%s\n",curr->map, curr->id, curr->map,curr->pos_type));
+						Cbuf_AddText(va("screenshot %s/%s_%s_%s\n",curr->map, curr->map, curr->id, curr->pos_type));
 					} else {
-						Cbuf_AddText(va("screenshot %s-%s-%s\n", curr->id, curr->map, curr->pos_type));
+						Cbuf_AddText(va("screenshot %s_%s_%s\n", curr->map, curr->id, curr->pos_type));
 					}
 
 					// Move to next saved cam pos in file
@@ -1033,11 +1033,14 @@ static void Cam_Pos_Load_From_File (void)
 	char seps[] = ",";
 	char *token;
 
+	char *prevMap = malloc(sizeof(char));
+
+
 	if (cam_pos_file == NULL) {
 		Com_Printf("Error : Failed to open common_file - %s\n", strerror(errno));
 	} else {
 		while (fgets(buffer, BUFSIZ, cam_pos_file) != NULL) {
-			counter++;
+
 			strcpy(tempBuf, buffer);
 
 			token = strtok(tempBuf, seps);
@@ -1070,8 +1073,15 @@ static void Cam_Pos_Load_From_File (void)
 				field++;
 			}
 			
+			if (strcmp(prevMap, map) != 0) {
+				Com_Printf("Inne i loopen!\n");
+				counter = 0;
+				strcpy(prevMap, map);
+			}
+
 			struct cam_positions *cam_pos_new = malloc(sizeof(struct cam_positions));
-			sprintf(id, "%i", counter);
+			sprintf(id, "%i", ++counter);
+
 			cam_pos_new->id 		= strdup(id);
 			cam_pos_new->map 		= strdup(map);
 			cam_pos_new->pos_x 		= strdup(coord_x);
@@ -1095,6 +1105,8 @@ static void Cam_Pos_Load_From_File (void)
 		}
 		fclose(cam_pos_file);
 	}
+
+	free(prevMap);
 }
 
 /***
