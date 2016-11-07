@@ -896,12 +896,15 @@ void Cam_Auto_Screenshot (char *curr_map, int curr_sv_time)
 				
 				// Set camera angles
 				Cbuf_AddText(va("cam_angles %s %s %s\n", curr->pitch, curr->yaw, curr->roll));
-				
+
 				// Wait until we are really sure we're in the right position...
 				if (	strcmp(myftos(cl.simorg[0]), curr->pos_x) == 0
 					&& 	strcmp(myftos(cl.simorg[1]), curr->pos_y) == 0 
-					&& 	strcmp(myftos(cl.simorg[2]), curr->pos_z) == 0) {
-
+					&& 	strcmp(myftos(cl.simorg[2]), curr->pos_z) == 0
+					&&  fabs((strtod(curr->pitch, NULL) - cl.viewangles[0])) < 2
+					&& 	fabs((strtod(curr->yaw, NULL) 	- cl.viewangles[1])) < 2
+					&&	fabs((strtod(curr->roll, NULL) 	- cl.viewangles[2])) < 2) {
+ 
 					// Take screenshot
 					if (cam_pos_file_format.value == 1) {
 						Cbuf_AddText(va("screenshot %s/%s_%s_%s\n",curr->map, curr->map, curr->id, curr->pos_type));
@@ -1012,15 +1015,15 @@ static void Cam_Pos_Load_From_File (void)
 	// File handling vars 
 	char buffer[BUFSIZ];
 
-	char id[8]; // TODO: Remove?
-	char *map;
-	char *coord_x;
-	char *coord_y;
-	char *coord_z;
-	char *pitch;
-	char *yaw;
-	char *roll;
-	char *pos_type;
+	char id[4];
+	char map[10];
+	char coord_x[6];
+	char coord_y[6];
+	char coord_z[6];
+	char pitch[6];
+	char yaw[6];
+	char roll[6];
+	char pos_type[16];
 
 	int counter = 0;
 
@@ -1033,8 +1036,7 @@ static void Cam_Pos_Load_From_File (void)
 	char seps[] = ",";
 	char *token;
 
-	char *prevMap = malloc(sizeof(char));
-
+	char prevMap[10];
 
 	if (cam_pos_file == NULL) {
 		Com_Printf("Error : Failed to open common_file - %s\n", strerror(errno));
@@ -1046,28 +1048,28 @@ static void Cam_Pos_Load_From_File (void)
 			token = strtok(tempBuf, seps);
 			while (token != NULL) {
 				if (field == 0)
-					map = token;
+					strcpy(map,token);
 
 				if (field == 1)
-					coord_x = token;
+					strcpy(coord_x, token);
 
 				if (field == 2)
-					coord_y = token;
+					strcpy(coord_y, token);
 
 				if (field == 3)
-					coord_z = token;
+					strcpy(coord_z, token);
 
 				if (field == 4)
-					pitch = token;
+					strcpy(pitch, token);
 
 				if (field == 5)
-					yaw = token;
+					strcpy(yaw, token);
 
 				if (field == 6)
-					roll = token;
+					strcpy(roll, token);
 
 				if (field == 7)
-					pos_type = token;
+					strcpy(pos_type, token);
 
 				token = strtok(NULL, seps);
 				field++;
@@ -1086,11 +1088,13 @@ static void Cam_Pos_Load_From_File (void)
 			// real Z value. Particularly noticable in DM2 bigroom evil man intermission
 			// which gets slightly obscured without this compensation.
 			if (strcmp(pos_type, "intermission\n") == 0) {
-				int temp_z = strtol(coord_z, NULL, 10);
+				int temp_z = 0; 
+				temp_z = atoi(coord_z);
 				temp_z -= 22;
-				sprintf(coord_z, "%i", temp_z);
+				
+				snprintf(coord_z, sizeof(coord_z), "%i", temp_z);
 			}
-
+			
 			cam_pos_new->id 		= strdup(id);
 			cam_pos_new->map 		= strdup(map);
 			cam_pos_new->pos_x 		= strdup(coord_x);
@@ -1108,14 +1112,11 @@ static void Cam_Pos_Load_From_File (void)
 				cam_pos_current = cam_pos_current->next = cam_pos_new;
 			}
 
-			// TODO: Remove ID?
-			map = coord_x = coord_y = coord_z = pitch = yaw = roll = pos_type = 0;
+			map[0] = coord_x[0] = coord_y[0] = coord_z[0] = pitch[0] = yaw[0] = roll[0] = pos_type[0] = 0;
 			field = 0;
 		}
 		fclose(cam_pos_file);
 	}
-
-	free(prevMap);
 }
 
 /***
