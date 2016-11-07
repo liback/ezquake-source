@@ -1081,6 +1081,16 @@ static void Cam_Pos_Load_From_File (void)
 			struct cam_positions *cam_pos_new = malloc(sizeof(struct cam_positions));
 			sprintf(id, "%i", ++counter);
 
+			// During intermissions in Quake, the player model gets set to NULL
+			// which means the actual view is offset by -22 compared to the 
+			// real Z value. Particularly noticable in DM2 bigroom evil man intermission
+			// which gets slightly obscured without this compensation.
+			if (strcmp(pos_type, "intermission\n") == 0) {
+				int temp_z = strtol(coord_z, NULL, 10);
+				temp_z -= 22;
+				sprintf(coord_z, "%i", temp_z);
+			}
+
 			cam_pos_new->id 		= strdup(id);
 			cam_pos_new->map 		= strdup(map);
 			cam_pos_new->pos_x 		= strdup(coord_x);
