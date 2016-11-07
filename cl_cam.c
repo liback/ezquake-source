@@ -1016,7 +1016,7 @@ static void Cam_Pos_Load_From_File (void)
 	char buffer[BUFSIZ];
 
 	char id[4];
-	char map[10];
+	char map[16];
 	char coord_x[6];
 	char coord_y[6];
 	char coord_z[6];
@@ -1036,7 +1036,7 @@ static void Cam_Pos_Load_From_File (void)
 	char seps[] = ",";
 	char *token;
 
-	char prevMap[10];
+	char prevMap[16];
 
 	if (cam_pos_file == NULL) {
 		Com_Printf("Error : Failed to open common_file - %s\n", strerror(errno));
