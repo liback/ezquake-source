@@ -1074,7 +1074,6 @@ static void Cam_Pos_Load_From_File (void)
 			}
 			
 			if (strcmp(prevMap, map) != 0) {
-				Com_Printf("Inne i loopen!\n");
 				counter = 0;
 				strcpy(prevMap, map);
 			}
