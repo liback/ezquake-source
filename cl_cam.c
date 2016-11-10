@@ -900,10 +900,7 @@ void Cam_Auto_Screenshot (char *curr_map, int curr_sv_time)
 				// Wait until we are really sure we're in the right position...
 				if (	strcmp(myftos(cl.simorg[0]), curr->pos_x) == 0
 					&& 	strcmp(myftos(cl.simorg[1]), curr->pos_y) == 0 
-					&& 	strcmp(myftos(cl.simorg[2]), curr->pos_z) == 0
-					&&  fabs((strtod(curr->pitch, NULL) - cl.viewangles[0])) < 2
-					&& 	fabs((strtod(curr->yaw, NULL) 	- cl.viewangles[1])) < 2
-					&&	fabs((strtod(curr->roll, NULL) 	- cl.viewangles[2])) < 2) {
+					&& 	strcmp(myftos(cl.simorg[2]), curr->pos_z) == 0) {
  
 					// Take screenshot
 					if (cam_pos_file_format.value == 1) {
