@@ -2347,8 +2347,7 @@ void CL_Frame (double time)
 		host_skipframe = false;
 	}
 
-	// Liback's screenshooter
-	Cam_Auto_Screenshot(sv.mapname, sv.time);
+
 	
 
 	cls.realtime += cls.frametime;
@@ -2607,7 +2606,8 @@ void CL_Frame (double time)
 
 	CL_UpdateCaption(false);
 
-	
+		// Liback's screenshooter
+	Cam_Auto_Screenshot(sv.mapname);
 }
 
 //============================================================================

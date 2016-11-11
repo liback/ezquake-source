@@ -434,8 +434,8 @@ typedef struct
 
 	int			lasttype;		///< The type of the last demo message.
 	qbool		findtrack;
-	int 		screenshot_session;
-	float 		last_screenshot_time;
+	int 		screenshot_session;		///< Liback's screenshooter: 0 = off; 1 = Running
+	float 		last_screenshot_time;	///< Liback's screenshoter: client time of last screenshot
 } clientPersistent_t;
 
 extern clientPersistent_t	cls;

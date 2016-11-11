@@ -77,7 +77,7 @@ static void Cam_Pos_Free_All(void);
 static void Cam_Pos_Load_From_File(void);
 static void Cam_Pos_Save_To_File_f(void);
 
-void Cam_Auto_Screenshot(char* current_map, int curr_sv_time);
+void Cam_Auto_Screenshot(char* current_map);
 void Cam_Pos_Start_Screenshooter_f(void);
 void Cam_Pos_Stop_Screenshooter_f(void);
 void Cam_Pos_Pause_Screenshooter_f(void);
@@ -881,7 +881,7 @@ void CL_InitCam(void)
 *	This function is called in the CL_Frame() in cl_main.c.
 *
 ***/
-void Cam_Auto_Screenshot (char *curr_map, int curr_sv_time)
+void Cam_Auto_Screenshot (char *curr_map)
 {
 	struct cam_positions *curr = cam_pos_current;
 	if (cls.screenshot_session == 1 && screenshooter_paused == 0) {
@@ -889,8 +889,8 @@ void Cam_Auto_Screenshot (char *curr_map, int curr_sv_time)
 		if (strcmp(cam_pos_current->map, curr_map) == 0) {
 
 			// Some delay to get rid of the console blocking our view
-			if ((curr_sv_time > 2 && cls.state >= ca_active) && (curr_sv_time - cls.last_screenshot_time > 2)) {
-				
+			if ((cl.time > 1.0 && cls.state == ca_active) && (cl.time - cls.last_screenshot_time > 0.1)) {
+
 				// Set camera position
 				Cbuf_AddText(va("cam_pos %s %s %s\n", curr->pos_x, curr->pos_y, curr->pos_z));
 				
@@ -901,13 +901,15 @@ void Cam_Auto_Screenshot (char *curr_map, int curr_sv_time)
 				if (	strcmp(myftos(cl.simorg[0]), curr->pos_x) == 0
 					&& 	strcmp(myftos(cl.simorg[1]), curr->pos_y) == 0 
 					&& 	strcmp(myftos(cl.simorg[2]), curr->pos_z) == 0) {
- 
+
 					// Take screenshot
 					if (cam_pos_file_format.value == 1) {
 						Cbuf_AddText(va("screenshot %s/%s_%s_%s\n",curr->map, curr->map, curr->id, curr->pos_type));
 					} else {
 						Cbuf_AddText(va("screenshot %s_%s_%s\n", curr->map, curr->id, curr->pos_type));
 					}
+
+					cls.last_screenshot_time = cl.time;
 
 					// Move to next saved cam pos in file
 					if (cam_pos_current->next != NULL) {
@@ -925,6 +927,8 @@ void Cam_Auto_Screenshot (char *curr_map, int curr_sv_time)
 		} else {
 			// If we're not on the same map as the current
 			// cam position from the file is for, we change map
+			// and reset tracker of last screenshot time.
+			cls.last_screenshot_time = 0;
 			Cbuf_AddText(va("map %s\n", curr->map));
 		}
 	}
